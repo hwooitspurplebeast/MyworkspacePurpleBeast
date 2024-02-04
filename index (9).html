@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Workspace Manager</title>
+    <style>
+        .workspace {
+            border: 1px solid #ccc;
+            margin: 10px;
+            padding: 10px;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/interactjs@1.10.11/dist/interact.min.js"></script>
+</head>
+<body>
+
+    <button id="addBtn">Add Workspace</button>
+    <button id="deleteAllBtn">Delete All Workspaces</button>
+    <select id="deleteDropdown"></select>
+    <button id="deleteBtn" style="display: none;">Delete Workspace</button>
+    <button id="deleteParticularBtn">Delete Particular Workspace</button>
+    <select id="deleteParticularDropdown"></select>
+    <button id="editBtn">Edit Workspace</button>
+    <select id="editDropdown"></select>
+
+    <div id="workspaces"></div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const addBtn = document.getElementById('addBtn');
+            const deleteDropdown = document.getElementById('deleteDropdown');
+            const deleteBtn = document.getElementById('deleteBtn');
+            const deleteAllBtn = document.getElementById('deleteAllBtn');
+            const deleteParticularBtn = document.getElementById('deleteParticularBtn');
+            const deleteParticularDropdown = document.getElementById('deleteParticularDropdown');
+            const editBtn = document.getElementById('editBtn');
+            const editDropdown = document.getElementById('editDropdown');
+            const workspacesDiv = document.getElementById('workspaces');
+
+            // Load workspaces from local storage on page load
+            loadWorkspaces();
+
+            addBtn.addEventListener('click', () => {
+                const workspaceName = prompt('Enter workspace name:');
+                if (workspaceName !== null) {
+                    createWorkspace(workspaceName);
+                    updateDropdowns();
+                    saveWorkspaces(); // Save workspaces to local storage
+                }
+            });
+
+            deleteAllBtn.addEventListener('click', () => {
+                const confirmDeleteAll = confirm('Are you sure you want to delete all workspaces?');
+                if (confirmDeleteAll) {
+                    deleteAllWorkspaces();
+                }
+            });
+
+            deleteParticularBtn.addEventListener('click', () => {
+                populateDeleteParticularDropdown();
+                const workspaceIndex = prompt('Select workspace to delete:');
+                if (workspaceIndex !== null) {
+                    deleteParticularWorkspace(workspaceIndex);
+                }
+            });
+
+            function deleteParticularWorkspace(index) {
+                const workspaceToDelete = document.querySelectorAll('.workspace')[index];
+                if (workspaceToDelete) {
+                    workspacesDiv.removeChild(workspaceToDelete);
+                    updateDropdowns();
+                    saveWorkspaces(); // Save workspaces to local storage
+
+                    // Check if there are still workspaces remaining
+                    if (document.querySelectorAll('.workspace').length === 0) {
+                        deleteBtn.style.display = 'none';
+                    }
+                }
+            }
+
+            function populateDeleteParticularDropdown() {
+                deleteParticularDropdown.innerHTML = '';
+                const workspaces = document.querySelectorAll('.workspace');
+
+                workspaces.forEach((workspace, index) => {
+                    const optionDelete = document.createElement('option');
+                    optionDelete.value = index;
+                    optionDelete.textContent = workspace.querySelector('h3').textContent;
+                    deleteParticularDropdown.appendChild(optionDelete);
+                });
+            }
+
+            function deleteAllWorkspaces() {
+                const workspaces = document.querySelectorAll('.workspace');
+                workspaces.forEach(workspace => {
+                    workspacesDiv.removeChild(workspace);
+                });
+                updateDropdowns();
+                saveWorkspaces(); // Save workspaces to local storage
+                deleteBtn.style.display = 'none'; // Hide delete button after deleting all workspaces
+            }
+
+            function createWorkspace(workspaceName) {
+                const workspace = document.createElement('div');
+                workspace.className = 'workspace';
+                workspace.innerHTML = `<h3>${workspaceName}</h3><textarea></textarea>`;
+                workspacesDiv.appendChild(workspace);
+
+                // Make the workspace resizable and draggable
+                makeWorkspaceResizable(workspace);
+                makeWorkspaceDraggable(workspace);
+
+                // Add event listener for textarea content change
+                const textarea = workspace.querySelector('textarea');
+                textarea.addEventListener('input', () => {
+                    saveWorkspaces(); // Save workspaces to local storage on every character change
+                });
+            }
+
+            function updateDropdowns() {
+                deleteDropdown.innerHTML = '';
+                editDropdown.innerHTML = '';
+
+                const workspaces = document.querySelectorAll('.workspace');
+
+                workspaces.forEach((workspace, index) => {
+                    const optionDelete = document.createElement('option');
+                    optionDelete.value = index;
+                    optionDelete.textContent = workspace.querySelector('h3').textContent;
+                    deleteDropdown.appendChild(optionDelete);
+
+                    const optionEdit = document.createElement('option');
+                    optionEdit.value = index;
+                    optionEdit.textContent = workspace.querySelector('h3').textContent;
+                    editDropdown.appendChild(optionEdit);
+                });
+            }
+
+            deleteDropdown.addEventListener('change', () => {
+                deleteBtn.style.display = deleteDropdown.value !== '' ? 'block' : 'none';
+            });
+
+            deleteBtn.addEventListener('click', () => {
+                const index = deleteDropdown.value;
+                const workspaceToDelete = document.querySelectorAll('.workspace')[index];
+                if (workspaceToDelete) {
+                    workspacesDiv.removeChild(workspaceToDelete);
+                    updateDropdowns();
+                    saveWorkspaces(); // Save workspaces to local storage
+
+                    // Check if there are still workspaces remaining
+                    if (document.querySelectorAll('.workspace').length === 0) {
+                        deleteBtn.style.display = 'none';
+                    }
+                }
+            });
+
+            editDropdown.addEventListener('change', () => {
+                const index = editDropdown.value;
+                const workspaceToEdit = document.querySelectorAll('.workspace')[index];
+                const newName = prompt('Enter new name for the workspace:', workspaceToEdit.querySelector('h3').textContent);
+                if (newName !== null) {
+                    workspaceToEdit.querySelector('h3').textContent = newName;
+                    updateDropdowns();
+                    saveWorkspaces(); // Save workspaces to local storage
+                }
+            });
+
+            // Function to save workspaces to local storage
+            function saveWorkspaces() {
+                const workspaces = [];
+                const workspaceElements = document.querySelectorAll('.workspace');
+
+                workspaceElements.forEach(workspaceElement => {
+                    const workspaceName = workspaceElement.querySelector('h3').textContent;
+                    const workspaceData = workspaceElement.querySelector('textarea').value;
+                    workspaces.push({ name: workspaceName, data: workspaceData });
+                });
+
+                localStorage.setItem('workspaces', JSON.stringify(workspaces));
+            }
+
+            // Function to load workspaces from local storage
+            function loadWorkspaces() {
+                const storedWorkspaces = localStorage.getItem('workspaces');
+
+                if (storedWorkspaces) {
+                    const workspaces = JSON.parse(storedWorkspaces);
+
+                    workspaces.forEach(workspace => {
+                        createWorkspace(workspace.name);
+                        const addedWorkspace = document.querySelector('.workspace:last-child');
+                        addedWorkspace.querySelector('textarea').value = workspace.data;
+                    });
+
+                    updateDropdowns();
+                }
+            }
+
+            // Function to make the workspace resizable
+            function makeWorkspaceResizable(workspace) {
+                interact(workspace).resizable({
+                    edges: { bottom: true, right: true },
+                    listeners: {
+                        move(event) {
+                            const target = event.target;
+                            const x = (parseFloat(target.getAttribute('data-x')) || 0);
+                            const y = (parseFloat(target.getAttribute('data-y')) || 0);
+
+                            target.style.width = event.rect.width + 'px';
+                            target.style.height = event.rect.height + 'px';
+
+                            target.setAttribute('data-x', x + event.deltaRect.left);
+                            target.setAttribute('data-y', y + event.deltaRect.top);
+                        },
+                    },
+                });
+            }
+
+            // Function to make the workspace draggable
+            function makeWorkspaceDraggable(workspace) {
+                interact(workspace).draggable({
+                    listeners: {
+                        move(event) {
+                            const target = event.target;
+                            const x = (parseFloat(target.getAttribute('data-x')) || 0);
+                            const y = (parseFloat(target.getAttribute('data-y')) || 0);
+
+                            target.style.transform = `translate(${x + event.dx}px, ${y + event.dy}px)`;
+
+                            target.setAttribute('data-x', x + event.dx);
+                            target.setAttribute('data-y', y + event.dy);
+                        },
+                    },
+                });
+            }
+        });
+    </script>
+
+</body>
+</html>
